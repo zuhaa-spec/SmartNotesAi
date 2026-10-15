@@ -3,6 +3,7 @@ Smart Notes AI — AI-powered study assistant (rule-based extractive summary + q
 Built for GDG Technical Team interview demo. No paid APIs or heavy ML models required.
 """
 
+import html
 import random
 import re
 from collections import Counter
@@ -301,31 +302,96 @@ def inject_custom_css() -> None:
     st.markdown(
         """
         <style>
-        /* Warm off-white dashboard */
-        .stApp {
-            background-color: #F7F5F0;
-            color: #2C2C2C;
+        :root {
+            --sn-bg: #F7F5F0;
+            --sn-text: #1F1F1F;
+            --sn-text-muted: #4A4A4A;
+            --sn-accent: #4A7C59;
+            --sn-card-bg: #FFFFFF;
+            --sn-border: #D8D2C8;
         }
-        [data-testid="stSidebar"] {
-            background-color: #EFEBE3;
-            border-right: 1px solid #D8D2C8;
+
+        .stApp, [data-testid="stAppViewContainer"] {
+            background-color: var(--sn-bg);
+            color: var(--sn-text);
         }
-        h1, h2, h3 {
+
+        /* Main content + sidebar: force readable charcoal on light backgrounds */
+        .stApp p, .stApp li, .stApp span, .stApp label, .stApp div,
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] li,
+        [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] label,
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stMarkdownContainer"] li,
+        [data-testid="stMarkdownContainer"] span {
+            color: var(--sn-text);
+        }
+
+        h1, h2, h3, h4, h5, h6,
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3 {
             color: #2C2C2C !important;
             font-weight: 600 !important;
         }
+
+        [data-testid="stCaptionContainer"], .stCaption {
+            color: var(--sn-text-muted) !important;
+        }
+
+        [data-testid="stSidebar"] {
+            background-color: #EFEBE3;
+            border-right: 1px solid var(--sn-border);
+        }
+
+        /* Form controls */
+        textarea, input, select {
+            color: var(--sn-text) !important;
+            background-color: #FFFFFF !important;
+            caret-color: var(--sn-text) !important;
+        }
+
+        [data-testid="stTextArea"] textarea::placeholder {
+            color: #757575 !important;
+            opacity: 1;
+        }
+
+        [data-testid="stRadio"] label,
+        [data-testid="stRadio"] label span,
+        [data-testid="stSlider"] label,
+        [data-testid="stSelectSlider"] label,
+        [data-testid="stFileUploader"] label,
+        [data-testid="stFileUploader"] small {
+            color: var(--sn-text) !important;
+        }
+
+        [data-testid="stMetricLabel"] {
+            color: var(--sn-text-muted) !important;
+        }
+        [data-testid="stMetricValue"] {
+            color: var(--sn-accent) !important;
+        }
+
         .sn-card {
-            background: #FFFFFF;
+            background: var(--sn-card-bg);
             border: 1px solid #E2DDD4;
             border-radius: 12px;
             padding: 1.25rem 1.5rem;
             margin-bottom: 1rem;
             box-shadow: 0 2px 8px rgba(44, 44, 44, 0.06);
+            color: var(--sn-text) !important;
         }
+        .sn-card p, .sn-card strong {
+            color: var(--sn-text) !important;
+            line-height: 1.6;
+            margin: 0;
+        }
+
         .sn-badge {
             display: inline-block;
             background: #E8F0EA;
-            color: #3D5C45;
+            color: #2D4A35;
             padding: 0.2rem 0.65rem;
             border-radius: 999px;
             font-size: 0.75rem;
@@ -333,25 +399,49 @@ def inject_custom_css() -> None:
             margin-bottom: 0.5rem;
         }
         .sn-muted {
-            color: #5C5C5C;
+            color: var(--sn-text-muted) !important;
             font-size: 0.95rem;
+            line-height: 1.5;
         }
-        div.stButton > button[kind="primary"] {
-            background-color: #4A7C59;
-            border-color: #4A7C59;
-            color: white;
+
+        div.stButton > button {
+            color: var(--sn-text) !important;
+            background-color: #FFFFFF !important;
+            border: 1px solid #C9C3B8 !important;
             border-radius: 8px;
             font-weight: 500;
         }
-        div.stButton > button[kind="primary"]:hover {
-            background-color: #3D6A4A;
-            border-color: #3D6A4A;
+        div.stButton > button[kind="primary"] {
+            background-color: var(--sn-accent) !important;
+            border-color: var(--sn-accent) !important;
+            color: #FFFFFF !important;
         }
-        div[data-testid="stMetricValue"] {
-            color: #3D5C45;
+        div.stButton > button[kind="primary"]:hover {
+            background-color: #3D6A4A !important;
+            border-color: #3D6A4A !important;
+            color: #FFFFFF !important;
+        }
+        div.stButton > button:disabled {
+            color: #888888 !important;
+            background-color: #F0EDE8 !important;
+        }
+
+        /* Progress bar label */
+        [data-testid="stProgressBar"] + div,
+        [data-testid="stProgress"] label {
+            color: var(--sn-text) !important;
         }
         </style>
         """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_text_card(text: str) -> None:
+    """Single HTML block so card styling wraps the full text (visible on light bg)."""
+    safe = html.escape(text)
+    st.markdown(
+        f'<div class="sn-card"><p class="sn-card-text">{safe}</p></div>',
         unsafe_allow_html=True,
     )
 
@@ -462,9 +552,7 @@ def page_summary() -> None:
         st.warning("Could not build a summary. Try longer notes with full sentences.")
         return
 
-    st.markdown('<div class="sn-card">', unsafe_allow_html=True)
-    st.markdown(st.session_state.summary_text)
-    st.markdown("</div>", unsafe_allow_html=True)
+    render_text_card(st.session_state.summary_text)
 
     with st.expander("Sentences included in the summary"):
         for i, s in enumerate(st.session_state.summary_sentences, 1):
@@ -501,9 +589,10 @@ def page_quiz() -> None:
 
     st.progress((idx + 1) / total, text=f"Question {idx + 1} of {total}")
 
-    st.markdown('<div class="sn-card">', unsafe_allow_html=True)
-    st.markdown(f"**{q['question']}**")
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="sn-card"><p class="sn-card-text"><strong>{html.escape(q["question"])}</strong></p></div>',
+        unsafe_allow_html=True,
+    )
 
     # Stable key per question index for radio
     current = st.session_state.user_answers[idx]
@@ -544,9 +633,10 @@ def render_results(questions: list[dict]) -> None:
     m3.metric("Correct", stats["correct"])
     m4.metric("Questions", stats["total"])
 
+    summary_line = performance_summary(stats["percent"])
     st.markdown(
-        f'<div class="sn-card"><strong>Performance summary:</strong> '
-        f"{performance_summary(stats['percent'])}</div>",
+        f'<div class="sn-card"><p class="sn-card-text"><strong>Performance summary:</strong> '
+        f"{html.escape(summary_line)}</p></div>",
         unsafe_allow_html=True,
     )
 
