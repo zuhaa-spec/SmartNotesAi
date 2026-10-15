@@ -710,8 +710,8 @@ def main() -> None:
         )
         st.markdown("---")
         st.markdown(
-            '<p class="sn-muted" style="font-size:0.85rem;">Muted green accents · '
-            "student-friendly dashboard</p>",
+            '<p class="" style="font-size:0.85rem;"> '
+            "</p>",
             unsafe_allow_html=True,
         )
 
